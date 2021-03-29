@@ -9,9 +9,9 @@ from statsmodels.regression.linear_model import yule_walker
 print("starting program")
 
 # Sampling rate in Hz
-sampleRate = 30
+sampleRate = 60
 # Set the data time window in minutes
-timeWindow = 5 * 60
+timeWindow = 1 * 60
 # Select PMU based on user input
 pmuSelect = "cabine"
 
@@ -81,7 +81,6 @@ if len(freqValues) % numberBlocks != 0:
 processedFreq = np.array([])
 
 ######################### DATA PARCELING #########################
-
 for dataBlock in np.array_split(freqValues, numberBlocks):
 
     # Check for long NaN runs
@@ -121,22 +120,22 @@ ar *= -1
 polyCoeff = np.array([1])
 polyCoeff = np.append(polyCoeff, ar)
 
-print("modos estimados")
 raizes_est_z = np.roots(polyCoeff)
-raizes_est_s = np.log(raizes_est_z) / (1 / downsampleFreq)
-print(raizes_est_s)
+raizes_est_s = np.log(raizes_est_z) * downsampleFreq
+
+# # Remove negative frequencies
+raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
+
+# Calculates frequency in hertz and damping ratio in percentage
+freq_y = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
+damp_x = [-mode.real / np.absolute(mode) for mode in raizes_est_s]
+
+print("modos estimados")
+print(freq_y)
+print(damp_x)
 
 ######################### PLOT #########################
-x_data = [root.real for root in raizes_est_s]
-y_data = [root.imag for root in raizes_est_s]
-
-plt.scatter(x_data, y_data)
-plt.ylabel("Imaginary")
-plt.xlabel("Real")
+plt.scatter(damp_x, freq_y)
+plt.ylabel("Frequência [Hz]")
+plt.xlabel("Fator de amortecimento")
 plt.show()
-
-# plt.plot(freqValues)
-# plt.show()
-
-# plt.plot(processedFreq)
-# plt.show()
