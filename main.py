@@ -11,9 +11,9 @@ print("starting program")
 # Sampling rate in Hz
 sampleRate = 60
 # Set the data time window in minutes
-timeWindow = 1 * 60
+timeWindow = 60
 # Select PMU based on user input
-pmuSelect = "cabine"
+pmuSelect = "agrarias"
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -86,28 +86,23 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     # Check for long NaN runs
     nanRun = dpp.find_nan_run(dataBlock, run_max=10)
 
-    # Discart block if run is too long
-    if nanRun:
-        print("WARNING: BIG NAN RUN!")
+    # Linear interpolation
+    dataBlock = dpp.linear_interpolation(dataBlock)
 
-    else:
-        # Linear interpolation
-        dataBlock = dpp.linear_interpolation(dataBlock)
+    # Detrend
+    dataBlock -= np.nanmean(dataBlock)
 
-        # Detrend
-        dataBlock -= np.nanmean(dataBlock)
+    # HP filter
+    dataBlock = signal.filtfilt(hpCoef, 1, dataBlock)
 
-        # HP filter
-        dataBlock = signal.filtfilt(hpCoef, 1, dataBlock)
+    # Outlier removal
+    dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
 
-        # Outlier removal
-        dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
+    # Linear interpolation
+    dataBlock = dpp.linear_interpolation(dataBlock)
 
-        # Linear interpolation
-        dataBlock = dpp.linear_interpolation(dataBlock)
-
-        # Downsample
-        dataBlock = signal.decimate(dataBlock, downsampleFactor, ftype="fir")
+    # Downsample
+    dataBlock = signal.decimate(dataBlock, downsampleFactor, ftype="fir")
 
     # Append processed data
     processedFreq = np.append(processedFreq, dataBlock)
@@ -129,10 +124,6 @@ raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
 # Calculates frequency in hertz and damping ratio in percentage
 freq_y = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
 damp_x = [-mode.real / np.absolute(mode) for mode in raizes_est_s]
-
-print("modos estimados")
-print(freq_y)
-print(damp_x)
 
 ######################### PLOT #########################
 plt.scatter(damp_x, freq_y)
