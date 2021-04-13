@@ -5,13 +5,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import data_preprocessing as dpp
 from statsmodels.regression.linear_model import yule_walker
+from sys import argv
+from json import dumps
 
 # Sampling rate in Hz
-sampleRate = 5
+sampleRate = int(argv[3])
+
 # Set the data time window in minutes
-timeWindow = 60
+timeWindow = int(argv[2])
+
 # Select PMU based on user input
-pmuSelect = "eficiencia"
+pmuSelect = argv[1]
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -42,6 +46,7 @@ apiData = np.array([get_data_from_api(startTime,
 # Splits data into time and frequency values and removes missing data
 unixValues = np.array([i[0] for i in apiData[0]])
 freqValues = np.array([i[1] for i in apiData[0]], dtype=np.float64)
+freqValues_toPHP = np.array([i[1] for i in apiData[0]], dtype=np.float64)
 
 # Converts unix time to Numpy DateTime64 time milisseconds and converts from GMT time to local time
 timeValues = np.array(
@@ -56,12 +61,6 @@ hpCoef = np.float32(signal.firwin(numtaps=1001,
                                   window='hann',
                                   pass_zero='highpass',
                                   fs=sampleRate))
-
-######################### DOWNSAMPLE CONFIG #########################
-
-# Downsample frequency in Hz
-downsampleFreq = 5
-downsampleFactor = int(sampleRate / downsampleFreq)
 
 ######################### PARCEL CONFIG #########################
 
@@ -99,14 +98,11 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     # Linear interpolation
     dataBlock = dpp.linear_interpolation(dataBlock)
 
-    # Downsample
-    dataBlock = signal.decimate(dataBlock, downsampleFactor, ftype="fir")
-
     # Append processed data
     processedFreq = np.append(processedFreq, dataBlock)
 
 ######################### YULE-WALKER #########################
-modelOrder = 10
+modelOrder = int(argv[4])
 ar, sigma = yule_walker(processedFreq, order=modelOrder)
 ar *= -1
 
@@ -114,7 +110,7 @@ polyCoeff = np.array([1])
 polyCoeff = np.append(polyCoeff, ar)
 
 raizes_est_z = np.roots(polyCoeff)
-raizes_est_s = np.log(raizes_est_z) * downsampleFreq
+raizes_est_s = np.log(raizes_est_z) * sampleRate
 
 # # Remove negative frequencies
 raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
@@ -123,8 +119,15 @@ raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
 freq_y = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
 damp_x = [-mode.real / np.absolute(mode) for mode in raizes_est_s]
 
-######################### PLOT #########################
-plt.scatter(damp_x, freq_y)
-plt.ylabel("Frequência [Hz]")
-plt.xlabel("Fator de amortecimento")
-plt.show()
+######################### DATA SEND #########################
+
+# Prepares dictionary for JSON file
+data_to_php = {
+    "freq": freqValues_toPHP.tolist(),
+    "date": timeValues.astype(str).tolist(),
+    "welch": freq_y.tolist(),
+    "welch_freq": damp_x.tolist()
+}
+
+# Sends dict data to php files over JSON
+print(dumps(data_to_php))
