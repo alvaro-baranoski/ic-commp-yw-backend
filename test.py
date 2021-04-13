@@ -53,17 +53,11 @@ timeValues = np.array(
 
 # FIR highpass filter coefficient design
 highpassFreq = 0.15
-hpCoef = np.float32(signal.firwin(numtaps=1001,
+hpCoef = np.float32(signal.firwin(numtaps=999,
                                   cutoff=highpassFreq,
                                   window='hann',
                                   pass_zero='highpass',
                                   fs=sampleRate))
-
-######################### DOWNSAMPLE CONFIG #########################
-
-# Downsample frequency in Hz
-downsampleFreq = 5
-downsampleFactor = int(sampleRate / downsampleFreq)
 
 ######################### PARCEL CONFIG #########################
 
@@ -101,9 +95,6 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     # Linear interpolation
     dataBlock = dpp.linear_interpolation(dataBlock)
 
-    # Downsample
-    dataBlock = signal.decimate(dataBlock, downsampleFactor, ftype="fir")
-
     # Append processed data
     processedFreq = np.append(processedFreq, dataBlock)
 
@@ -116,7 +107,7 @@ polyCoeff = np.array([1])
 polyCoeff = np.append(polyCoeff, ar)
 
 raizes_est_z = np.roots(polyCoeff)
-raizes_est_s = np.log(raizes_est_z) * downsampleFreq
+raizes_est_s = np.log(raizes_est_z) * sampleRate
 
 # # Remove negative frequencies
 raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
