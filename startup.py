@@ -1,3 +1,5 @@
+#! /opt/ic-commp/bin/python3 startup.py
+
 from get_data import get_data_from_api
 from datetime import datetime
 from scipy import signal
@@ -56,7 +58,7 @@ timeValues = np.array(
 
 # FIR highpass filter coefficient design
 highpassFreq = 0.15
-hpCoef = np.float32(signal.firwin(numtaps=1001,
+hpCoef = np.float32(signal.firwin(numtaps=999,
                                   cutoff=highpassFreq,
                                   window='hann',
                                   pass_zero='highpass',
@@ -125,8 +127,8 @@ damp_x = [-mode.real / np.absolute(mode) for mode in raizes_est_s]
 data_to_php = {
     "freq": freqValues_toPHP.tolist(),
     "date": timeValues.astype(str).tolist(),
-    "welch": freq_y.tolist(),
-    "welch_freq": damp_x.tolist()
+    "welch": freq_y,
+    "welch_freq": damp_x
 }
 
 # Sends dict data to php files over JSON
