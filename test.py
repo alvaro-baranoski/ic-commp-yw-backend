@@ -9,11 +9,11 @@ from statsmodels.regression.linear_model import yule_walker
 print("starting program")
 
 # Sampling rate in Hz
-sampleRate = 60
+sampleRate = 5
 # Set the data time window in minutes
 timeWindow = 60
 # Select PMU based on user input
-pmuSelect = "agrarias"
+pmuSelect = "eficiencia"
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
