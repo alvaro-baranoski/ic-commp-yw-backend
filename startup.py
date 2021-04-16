@@ -118,8 +118,8 @@ raizes_est_s = np.log(raizes_est_z) * sampleRate
 raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
 
 # Calculates frequency in hertz and damping ratio in percentage
-freq_y = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
-damp_x = [-mode.real / np.absolute(mode) for mode in raizes_est_s]
+freq_x = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
+damp_y = [-mode.real * 100 / np.absolute(mode) for mode in raizes_est_s]
 
 ######################### DATA SEND #########################
 
@@ -127,8 +127,8 @@ damp_x = [-mode.real / np.absolute(mode) for mode in raizes_est_s]
 data_to_php = {
     "freq": freqValues_toPHP.tolist(),
     "date": timeValues.astype(str).tolist(),
-    "welch": freq_y,
-    "welch_freq": damp_x
+    "welch": damp_y,
+    "welch_freq": freq_x
 }
 
 # Sends dict data to php files over JSON
