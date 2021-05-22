@@ -6,10 +6,55 @@ import matplotlib.pyplot as plt
 import data_preprocessing as dpp
 from statsmodels.regression.linear_model import yule_walker
 
+
+def get_modes(processedFreq, fs, modelOrder=10):
+    ar, sigma = yule_walker(processedFreq, order=modelOrder, method="mle")
+    ar *= -1
+
+    polyCoeff = np.array([1])
+    polyCoeff = np.append(polyCoeff, ar)
+
+    raizes_est_z = np.roots(polyCoeff)
+    raizes_est_s = np.log(raizes_est_z) * fs
+
+    # Remove negative frequencies
+    raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
+
+    # Calculates frequency in hertz and damping ratio in percentage
+    freq_y = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
+    damp_x = [-np.divide(mode.real, np.absolute(mode))
+              for mode in raizes_est_s]
+
+    return damp_x, freq_y
+
+
+def butterworth(data, cutoff, order, fs, kind="lowpass"):
+    # highpass filter
+    nyq = fs * 0.5
+
+    cutoff = cutoff / nyq
+
+    sos = signal.butter(order, cutoff, btype=kind, output="sos")
+
+    filtrada = signal.sosfilt(sos, data)
+
+    return filtrada
+
+
+def correct_length(data, batch):
+    # Corrects length of frequency list
+    if len(data) % batch != 0:
+        exactMult = np.floor(len(data) / batch)
+        exactLen = int(exactMult * batch)
+        lenDiff = len(data) - exactLen
+        data = data[:-lenDiff]
+    return data
+
+
 print("starting program")
 
 # Sampling rate in Hz
-sampleRate = 5
+sampleRate = 15
 # Set the data time window in minutes
 timeWindow = 60
 # Select PMU based on user input
@@ -49,30 +94,18 @@ freqValues = np.array([i[1] for i in apiData[0]], dtype=np.float64)
 timeValues = np.array(
     [np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
 
-######################### FILTER DESIGN #########################
-
-# FIR highpass filter coefficient design
-highpassFreq = 0.15
-hpCoef = np.float32(signal.firwin(numtaps=999,
-                                  cutoff=highpassFreq,
-                                  window='hann',
-                                  pass_zero='highpass',
-                                  fs=sampleRate))
-
 ######################### PARCEL CONFIG #########################
 
 # Set size of data blocks in minutes
-numberBlocks = timeWindow / 10
+numberBlocks = 3
 
 # Corrects length of frequency list
-if len(freqValues) % numberBlocks != 0:
-    exactMult = np.floor(len(freqValues) / numberBlocks)
-    exactLen = int(exactMult * numberBlocks)
-    lenDiff = len(freqValues) - exactLen
-    freqValues = freqValues[:-lenDiff]
+frequency = correct_length(freqValues, batch=numberBlocks)
 
 # Instantiate list for output values
 processedFreq = np.array([])
+
+#freqValues = signal.decimate(freqValues, int(60/5))
 
 ######################### DATA PARCELING #########################
 for dataBlock in np.array_split(freqValues, numberBlocks):
@@ -83,41 +116,28 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     # Linear interpolation
     dataBlock = dpp.linear_interpolation(dataBlock)
 
-    # Detrend
-    dataBlock -= np.nanmean(dataBlock)
-
-    # HP filter
-    dataBlock = signal.filtfilt(hpCoef, 1, dataBlock)
-
     # Outlier removal
     dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
 
     # Linear interpolation
     dataBlock = dpp.linear_interpolation(dataBlock)
 
+    # Detrend
+    dataBlock -= np.nanmean(dataBlock)
+
+    dataBlock = butterworth(dataBlock, cutoff=0.3, order=16,
+                            fs=sampleRate, kind="highpass")
+    dataBlock = butterworth(dataBlock, cutoff=7.0, order=16,
+                            fs=sampleRate, kind="lowpass")
+
     # Append processed data
     processedFreq = np.append(processedFreq, dataBlock)
 
 ######################### YULE-WALKER #########################
-modelOrder = 10
-ar, sigma = yule_walker(processedFreq, order=modelOrder)
-ar *= -1
-
-polyCoeff = np.array([1])
-polyCoeff = np.append(polyCoeff, ar)
-
-raizes_est_z = np.roots(polyCoeff)
-raizes_est_s = np.log(raizes_est_z) * sampleRate
-
-# # Remove negative frequencies
-raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
-
-# Calculates frequency in hertz and damping ratio in percentage
-freq_y = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
-damp_x = [-mode.real / np.absolute(mode) for mode in raizes_est_s]
+damp, freq = get_modes(processedFreq, fs=sampleRate, modelOrder=20)
 
 ######################### PLOT #########################
-plt.scatter(damp_x, freq_y)
-plt.ylabel("Frequência [Hz]")
-plt.xlabel("Fator de amortecimento")
+plt.scatter(freq, damp)
+plt.ylabel("Fator de amortecimento")
+plt.xlabel("Frequência [Hz]")
 plt.show()
