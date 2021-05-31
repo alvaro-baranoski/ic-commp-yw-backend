@@ -72,9 +72,12 @@ elif pmuSelect == "agrarias":
 ######################### DATE CONFIGURATION #########################
 
 # Get time window from current time in unix milisseconds format
-endTime = datetime.now()
-endTime = int((endTime.timestamp() - 60) * 1000)
-startTime = endTime - (timeWindow * 60 * 1000)
+# endTime = datetime.now()
+# endTime = int((endTime.timestamp() - 60) * 1000)
+# startTime = endTime - (timeWindow * 60 * 1000)
+
+startTime = 1620648000000
+endTime = 1620651600000
 
 ######################### DATA AQUISITION #########################
 

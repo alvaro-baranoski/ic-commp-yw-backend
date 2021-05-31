@@ -146,8 +146,8 @@ damp, freq = get_modes(processedFreq, fs=sampleRate, modelOrder=order)
 data_to_php = {
     "freq": freqValues_toPHP.tolist(),
     "date": timeValues.astype(str).tolist(),
-    "welch": freq,
-    "welch_freq": damp
+    "welch": damp,
+    "welch_freq": freq
 }
 
 # Sends dict data to php files over JSON
