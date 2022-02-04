@@ -3,6 +3,7 @@
 from get_data import get_data_from_api
 from datetime import datetime
 from scipy import signal
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 import data_preprocessing as dpp
@@ -94,6 +95,10 @@ apiData = np.array([get_data_from_api(startTime,
 unixValues = np.array([i[0] for i in apiData[0]])
 freqValues = np.array([i[1] for i in apiData[0]], dtype=np.float64)
 freqValues_toPHP = np.array([i[1] for i in apiData[0]], dtype=np.float64)
+
+# Checa se valores de frequência estão disponíveis
+if (all(math.isnan(v) for v in freqValues)):
+    raise NameError('Dados da PMU indisponíveis')
 
 # Converts unix time to Numpy DateTime64 time milisseconds and converts from GMT time to local time
 timeValues = np.array(
