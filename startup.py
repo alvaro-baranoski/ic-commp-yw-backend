@@ -56,16 +56,14 @@ def correct_length(data, batch):
     return data
 
 
-# Select PMU based on user input
-pmuSelect = argv[1]
-# Set the data time window in minutes
-timeWindow = int(argv[2])
 # Sampling rate in Hz
 sampleRate = int(argv[3])
-# Polynomial order
-order = int(argv[4])
-# View type
-viewSelect = argv[5]
+
+# Set the data time window in minutes
+timeWindow = int(argv[2])
+
+# Select PMU based on user input
+pmuSelect = argv[1]
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -86,23 +84,17 @@ startTime = endTime - (timeWindow * 60 * 1000)
 ######################### DATA AQUISITION #########################
 
 # Get the frequency data based on the start and end time
-apiData = np.array([get_data_from_api(
-    startTime,
-    endTime,
-    feed_id=pmuSelect,
-    interval=sampleRate,
-    interval_type=1,
-    skip_missing=0
-)])
+apiData = np.array([get_data_from_api(startTime,
+                                      endTime,
+                                      feed_id=pmuSelect,
+                                      interval=sampleRate,
+                                      interval_type=1,
+                                      skip_missing=0)])
 
 # Splits data into time and frequency values and removes missing data
 unixValues = np.array([i[0] for i in apiData[0]])
 freqValues = np.array([i[1] for i in apiData[0]], dtype=np.float64)
-
-# Pads NaN with linear interpolation
-# (this step is required for avoiding JSON parsing bug)
 freqValues_toPHP = np.array([i[1] for i in apiData[0]], dtype=np.float64)
-freqValues_toPHP = dpp.linear_interpolation(freqValues_toPHP)
 
 # Checa se valores de frequência estão disponíveis
 if (all(math.isnan(v) for v in freqValues)):
@@ -150,6 +142,7 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     processedFreq = np.append(processedFreq, dataBlock)
 
 ######################### YULE-WALKER #########################
+order = int(argv[4])
 damp, freq = get_modes(processedFreq, fs=sampleRate, modelOrder=order)
 
 ######################### DATA SEND #########################
@@ -158,13 +151,9 @@ damp, freq = get_modes(processedFreq, fs=sampleRate, modelOrder=order)
 data_to_php = {
     "freq": freqValues_toPHP.tolist(),
     "date": timeValues.astype(str).tolist(),
-    "damp": damp,
-    "modes": freq
+    "welch": damp,
+    "welch_freq": freq
 }
-
-# Adds advanced view type
-if (viewSelect == 'avancada'):
-    data_to_php["freq_process"] = processedFreq.tolist()
 
 # Sends dict data to php files over JSON
 print(dumps(data_to_php))
