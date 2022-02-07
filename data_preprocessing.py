@@ -85,8 +85,7 @@ def find_nan_run(inputArray, run_max=10):
 		runSize = nanIndex[runIndex + 1] - nanIndex[runIndex]
 		if runSize >= run_max:
 			#raise NameError(f"Sequence of {runSize} missing values. That's too many!")
-			print(f"Sequence of {runSize} missing values. That's too many!")
-			return True
+			raise NameError('Muitos dados faltantes em seguida')
 		runIndex += 2
 
 	return False
