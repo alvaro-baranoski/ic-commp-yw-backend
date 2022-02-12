@@ -163,7 +163,7 @@ data_to_php = {
 }
 
 # Adds advanced view type
-if (viewSelect == 'avancada'):
+if (viewSelect == 'complete'):
     data_to_php["freq_process"] = processedFreq.tolist()
 
 # Sends dict data to php files over JSON
