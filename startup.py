@@ -59,13 +59,25 @@ def correct_length(data, batch):
 # Select PMU based on user input
 pmuSelect = argv[1]
 # Set the data time window in minutes
+# Default value: 60
 timeWindow = int(argv[2])
 # Sampling rate in Hz
+# Default value: 15
 sampleRate = int(argv[3])
 # Polynomial order
+# Default value: 20
 order = int(argv[4])
+# Filter lower cutoff frequency
+# Default value: 0.3
+lower_filter = float(argv[5])
+# Filter higher cutoff frequency
+# Default value: 7.0
+higher_filter = float(argv[6])
+# Outlier detection constant
+# Default value: 3.5
+outlier_constant = float(argv[7])
 # View type
-viewSelect = argv[5]
+viewSelect = argv[8]
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -133,7 +145,7 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     dataBlock = dpp.linear_interpolation(dataBlock)
 
     # Outlier removal
-    dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
+    dataBlock = dpp.mean_outlier_removal(dataBlock, k=outlier_constant)
 
     # Linear interpolation
     dataBlock = dpp.linear_interpolation(dataBlock)
@@ -141,10 +153,21 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     # Detrend
     dataBlock -= np.nanmean(dataBlock)
 
-    dataBlock = butterworth(dataBlock, cutoff=0.3, order=16,
-                            fs=sampleRate, kind="highpass")
-    dataBlock = butterworth(dataBlock, cutoff=7.0, order=16,
-                            fs=sampleRate, kind="lowpass")
+    dataBlock = butterworth(
+        dataBlock, 
+        cutoff=lower_filter, 
+        order=16,
+        fs=sampleRate, 
+        kind="highpass"
+    )
+
+    dataBlock = butterworth(
+        dataBlock, 
+        cutoff=higher_filter, 
+        order=16,
+        fs=sampleRate, 
+        kind="lowpass"
+    )
 
     # Append processed data
     processedFreq = np.append(processedFreq, dataBlock)
