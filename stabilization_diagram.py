@@ -10,44 +10,14 @@ import data_preprocessing as dpp
 from statsmodels.regression.linear_model import yule_walker
 
 
-def get_modes(processedFreq, fs, modelOrder=10):
-    ar, sigma = yule_walker(processedFreq, order=modelOrder, method="mle")
-    ar *= -1
-
-    polyCoeff = np.array([1])
-    polyCoeff = np.append(polyCoeff, ar)
-
-    raizes_est_z = np.roots(polyCoeff)
-    raizes_est_s = np.log(raizes_est_z) * fs
-
-    # Remove negative frequencies
-    raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
-
-    # Calculates frequency in hertz and damping ratio in percentage
-    freq_y = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
-    damp_x = [-np.divide(mode.real, np.absolute(mode)) for mode in raizes_est_s]
-
-    return damp_x, freq_y
-
-
-def correct_length(data, batch):
-    # Corrects length of frequency list
-    if len(data) % batch != 0:
-        exactMult = np.floor(len(data) / batch)
-        exactLen = int(exactMult * batch)
-        lenDiff = len(data) - exactLen
-        data = data[:-lenDiff]
-    return data
-
-
 print("starting program")
 
 # Sampling rate in Hz
-sampleRate = 30
+sampleRate = 15
 # Set the data time window in minutes
 timeWindow = 120
 # Select PMU based on user input
-pmuSelect = "eficiencia"
+pmuSelect = "palotina"
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -87,34 +57,54 @@ if (all(math.isnan(v) for v in freqValues)):
 # Converts unix time to Numpy DateTime64 time milisseconds and converts from GMT time to local time
 timeValues = np.array([np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
 
-# Calculo do filtro passa faixa
-f1, f2 = 0.1, 2
-coef = signal.firwin(
-    numtaps=500,
-    cutoff=[f1, f2],
-    window='hann',
-    pass_zero=False,
-    fs=sampleRate
-)
+######################### PRE PROCESSING #########################
 
-# Interpolação linear
-interpoled = dpp.linear_interpolation(freqValues)
+# Set size of data blocks in minutes
+numberBlocks = 3
 
-# Outlier removal
-interpoled = dpp.mean_outlier_removal(interpoled, k=3.5)
+# Corrects length of frequency list
+frequency = dpp.correct_length(freqValues, batch=numberBlocks)
 
-# Linear interpolation
-interpoled = dpp.linear_interpolation(interpoled)
+# Instantiate list for output values
+processedFreq = np.array([])
 
-# Aplicação do filtro
-filtered = signal.filtfilt(coef, 1, interpoled)
+for dataBlock in np.array_split(freqValues, numberBlocks):
 
-# Downsample
-downsample_freq = 5
-downsampled = signal.decimate(filtered, int(sampleRate/downsample_freq))
+    # Check for long NaN runs
+    nanRun = dpp.find_nan_run(dataBlock, run_max=10)
 
-# PERGUNTA: COMO COMPARAR OS RESULTADOS OBTIDOS, JÁ QUE É UMA LISTA COM TAMANHOS
-# DIFERENTES? 
+    # Linear interpolation
+    dataBlock = dpp.linear_interpolation(dataBlock)
+
+    # Outlier removal
+    dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
+
+    # Linear interpolation
+    dataBlock = dpp.linear_interpolation(dataBlock)
+
+    # Detrend
+    dataBlock -= np.nanmean(dataBlock)
+
+    dataBlock = dpp.butterworth(
+        dataBlock, 
+        cutoff=0.3, 
+        order=16,
+        fs=sampleRate, 
+        kind="highpass"
+    )
+
+    dataBlock = dpp.butterworth(
+        dataBlock, 
+        cutoff=7, 
+        order=16,
+        fs=sampleRate, 
+        kind="lowpass"
+    )
+
+    # Append processed data
+    processedFreq = np.append(processedFreq, dataBlock)
+
+######################### STABILIZATION DIAGRAM #########################
 
 # Duração da janela em segundos
 window_duration = 10 * 60
@@ -123,9 +113,12 @@ window_moving_duration = 10
 # Range de ordens
 higher_order = 25
 lower_order = 2
+# Stabilization diagram thresholds (in %)
+FREQ_LIMIT = 1.5
+DAMP_LIMIT = 3.5
 
-window_points = window_duration * downsample_freq
-window_moving_points = window_moving_duration * downsample_freq
+window_points = window_duration * sampleRate
+window_moving_points = window_moving_duration * sampleRate
 
 lower_index = 0
 higher_index = window_points
@@ -137,36 +130,55 @@ prev_freq = []
 prev_damp = []
 
 # for i in range(30):
-batch = downsampled[lower_index:higher_index]
-for order in range(higher_order, lower_order-1, -1):
+# batch = downsampled[lower_index:higher_index]
+batch = processedFreq
+
+# Gets the first mode list
+prev_modes = []
+damp, freq = dpp.get_modes(batch, fs=sampleRate, modelOrder=higher_order)
+for i in range(len(freq)):
+    prev_modes.append((freq[i], damp[i]))
+prev_modes.sort(key=lambda x:x[0])
+
+# Loop through the order range
+for order in range(higher_order-1, lower_order-1, -1):
+    current_modes = []
+    print(f'-----------------------------------')
     print(f'Ordem número: {order}')
-    damp, freq = get_modes(batch, fs=downsample_freq, modelOrder=order)
-    if (order == higher_order):
-        prev_freq = freq
-        prev_damp = damp
-        continue
-
     
-
-    # print('comparação de frequências: ')
-    # print(prev_freq)
-    # print(freq)
-
-    # print('Comparação de amortecimentos: ')
-    # print(prev_damp)
-    # print(damp)
-
-    prev_freq = freq
-    prev_damp = damp
+    damp, freq = dpp.get_modes(batch, fs=sampleRate, modelOrder=order)
     
-    freq_list.extend(freq)
-    damp_list.extend(damp)
+    for i in range(len(freq)):
+        current_modes.append((freq[i], damp[i]))
+    
+    current_modes.sort(key=lambda x:x[0])
+    
+    # Do some math
+    # Loop through modes
+    for i in range(len(current_modes)):
+        # Find the closest frequency pair
+        mode_n = current_modes[i]
+        mode_n_1 = min(prev_modes, key=lambda x : abs(x[0] - mode_n[0]))
+        
+        freq_n = mode_n[0]
+        damp_n = mode_n[1]
+        freq_n_1 = mode_n_1[0]
+        damp_n_1 = mode_n_1[1]
+        
+        is_freq_valid = abs((freq_n - freq_n_1)/freq_n) * 100 <= FREQ_LIMIT
+        is_damp_valid = abs((damp_n - damp_n_1)/damp_n) * 100 <= DAMP_LIMIT
+
+        if (is_freq_valid and is_damp_valid):
+            print(f'{mode_n}   |   {mode_n_1}')
+
+
+    prev_modes = current_modes
 
 
 # lower_index += window_moving_points
 # higher_index += window_moving_points
 
 # plt.plot(batch)
-plt.scatter(freq_list, damp_list)
-plt.show()
+# plt.scatter(freq_list, damp_list)
+# plt.show()
 

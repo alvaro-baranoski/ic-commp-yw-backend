@@ -22,8 +22,7 @@ def get_modes(processedFreq, fs, modelOrder=10):
 
     # Calculates frequency in hertz and damping ratio in percentage
     freq_y = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
-    damp_x = [-np.divide(mode.real, np.absolute(mode))
-              for mode in raizes_est_s]
+    damp_x = [-np.divide(mode.real, np.absolute(mode)) for mode in raizes_est_s]
 
     return damp_x, freq_y
 
@@ -54,11 +53,11 @@ def correct_length(data, batch):
 print("starting program")
 
 # Sampling rate in Hz
-sampleRate = 15
+sampleRate = 30
 # Set the data time window in minutes
-timeWindow = 60
+timeWindow = 120
 # Select PMU based on user input
-pmuSelect = "eficiencia"
+pmuSelect = "agrarias"
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -72,75 +71,104 @@ elif pmuSelect == "agrarias":
 ######################### DATE CONFIGURATION #########################
 
 # Get time window from current time in unix milisseconds format
-# endTime = datetime.now()
-# endTime = int((endTime.timestamp() - 60) * 1000)
-# startTime = endTime - (timeWindow * 60 * 1000)
-
-startTime = 1620648000000
-endTime = 1620651600000
+endTime = datetime.now()
+endTime = int((endTime.timestamp() - 60) * 1000)
+startTime = endTime - (timeWindow * 60 * 1000)
 
 ######################### DATA AQUISITION #########################
 
 # Get the frequency data based on the start and end time
-apiData = np.array([get_data_from_api(startTime,
-                                      endTime,
-                                      feed_id=pmuSelect,
-                                      interval=sampleRate,
-                                      interval_type=1,
-                                      skip_missing=0)])
+apiData = np.array(
+    [get_data_from_api(
+    startTime,
+    endTime,
+    feed_id=pmuSelect,
+    interval=sampleRate,
+    interval_type=1,
+    skip_missing=0)])
 
 # Splits data into time and frequency values and removes missing data
 unixValues = np.array([i[0] for i in apiData[0]])
 freqValues = np.array([i[1] for i in apiData[0]], dtype=np.float64)
 
 # Converts unix time to Numpy DateTime64 time milisseconds and converts from GMT time to local time
-timeValues = np.array(
-    [np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
+timeValues = np.array([np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
 
+
+f1, f2 = 0.1, 2
+coef = signal.firwin(
+    numtaps=500,
+    cutoff=[f1, f2],
+    window='hann',
+    pass_zero=False,
+    fs=sampleRate
+)
+
+interpoled = dpp.linear_interpolation(freqValues)
+
+filtered = signal.filtfilt(coef, 1, interpoled)
+
+downsample_freq = 5
+downsampled = signal.decimate(filtered, int(sampleRate/downsample_freq))
+
+# Duração da janela em segundos
+window_duration = 10 * 60
+# Movimentação da janela em segundos
+window_moving = 10
+
+window_points = window_duration * downsample_freq
+
+batch = downsampled[:window_points]
+
+# damp, freq = get_modes(downsampled, fs=downsample_freq, modelOrder=25)
+
+# plt.scatter(freq, damp)
+plt.plot(batch)
+plt.show()
 ######################### PARCEL CONFIG #########################
 
 # Set size of data blocks in minutes
-numberBlocks = 3
+# numberBlocks = 3
 
 # Corrects length of frequency list
-frequency = correct_length(freqValues, batch=numberBlocks)
+# frequency = correct_length(freqValues, batch=numberBlocks)
 
 # Instantiate list for output values
-processedFreq = np.array([])
+# processedFreq = np.array([])
 
 #freqValues = signal.decimate(freqValues, int(60/5))
 
 ######################### DATA PARCELING #########################
-for dataBlock in np.array_split(freqValues, numberBlocks):
+# for dataBlock in np.array_split(freqValues, numberBlocks):
 
-    # Check for long NaN runs
-    nanRun = dpp.find_nan_run(dataBlock, run_max=10)
+#     # Check for long NaN runs
+#     nanRun = dpp.find_nan_run(dataBlock, run_max=10)
 
-    # Linear interpolation
-    dataBlock = dpp.linear_interpolation(dataBlock)
+#     # Linear interpolation
+#     dataBlock = dpp.linear_interpolation(dataBlock)
 
-    # Outlier removal
-    dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
+#     # Outlier removal
+#     dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
 
-    # Linear interpolation
-    dataBlock = dpp.linear_interpolation(dataBlock)
+#     # Linear interpolation
+#     dataBlock = dpp.linear_interpolation(dataBlock)
 
-    # Detrend
-    dataBlock -= np.nanmean(dataBlock)
+#     # Detrend
+#     dataBlock -= np.nanmean(dataBlock)
 
-    dataBlock = butterworth(dataBlock, cutoff=0.3, order=16,
-                            fs=sampleRate, kind="highpass")
-    dataBlock = butterworth(dataBlock, cutoff=7.0, order=16,
-                            fs=sampleRate, kind="lowpass")
+#     dataBlock = butterworth(dataBlock, cutoff=0.3, order=16,
+#                             fs=sampleRate, kind="highpass")
+#     dataBlock = butterworth(dataBlock, cutoff=7.0, order=16,
+#                             fs=sampleRate, kind="lowpass")
 
-    # Append processed data
-    processedFreq = np.append(processedFreq, dataBlock)
+#     # Append processed data
+#     processedFreq = np.append(processedFreq, dataBlock)
 
 ######################### YULE-WALKER #########################
-damp, freq = get_modes(processedFreq, fs=sampleRate, modelOrder=20)
+# damp, freq = get_modes(processedFreq, fs=sampleRate, modelOrder=20)
 
-######################### PLOT #########################
-plt.scatter(freq, damp)
-plt.ylabel("Fator de amortecimento")
-plt.xlabel("Frequência [Hz]")
-plt.show()
+# ######################### PLOT #########################
+# plt.scatter(freq, damp)
+# plt.ylabel("Fator de amortecimento")
+# plt.xlabel("Frequência [Hz]")
+# plt.show()

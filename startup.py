@@ -11,51 +11,6 @@ from statsmodels.regression.linear_model import yule_walker
 from sys import argv
 from json import dumps
 
-
-def get_modes(processedFreq, fs, modelOrder=10):
-    ar, sigma = yule_walker(processedFreq, order=modelOrder, method="mle")
-    ar *= -1
-
-    polyCoeff = np.array([1])
-    polyCoeff = np.append(polyCoeff, ar)
-
-    raizes_est_z = np.roots(polyCoeff)
-    raizes_est_s = np.log(raizes_est_z) * fs
-
-    # Remove negative frequencies
-    raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
-
-    # Calculates frequency in hertz and damping ratio in percentage
-    freq_y = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
-    damp_x = [-100 * np.divide(mode.real, np.absolute(mode))
-              for mode in raizes_est_s]
-
-    return damp_x, freq_y
-
-
-def butterworth(data, cutoff, order, fs, kind="lowpass"):
-    # highpass filter
-    nyq = fs * 0.5
-
-    cutoff = cutoff / nyq
-
-    sos = signal.butter(order, cutoff, btype=kind, output="sos")
-
-    filtrada = signal.sosfilt(sos, data)
-
-    return filtrada
-
-
-def correct_length(data, batch):
-    # Corrects length of frequency list
-    if len(data) % batch != 0:
-        exactMult = np.floor(len(data) / batch)
-        exactLen = int(exactMult * batch)
-        lenDiff = len(data) - exactLen
-        data = data[:-lenDiff]
-    return data
-
-
 # Select PMU based on user input
 pmuSelect = argv[1]
 # Set the data time window in minutes
@@ -130,7 +85,7 @@ timeValues = np.array(
 numberBlocks = 3
 
 # Corrects length of frequency list
-frequency = correct_length(freqValues, batch=numberBlocks)
+frequency = dpp.correct_length(freqValues, batch=numberBlocks)
 
 # Instantiate list for output values
 processedFreq = np.array([])
@@ -153,7 +108,7 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     # Detrend
     dataBlock -= np.nanmean(dataBlock)
 
-    dataBlock = butterworth(
+    dataBlock = dpp.butterworth(
         dataBlock, 
         cutoff=lower_filter, 
         order=16,
@@ -161,7 +116,7 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
         kind="highpass"
     )
 
-    dataBlock = butterworth(
+    dataBlock = dpp.butterworth(
         dataBlock, 
         cutoff=higher_filter, 
         order=16,
@@ -173,7 +128,7 @@ for dataBlock in np.array_split(freqValues, numberBlocks):
     processedFreq = np.append(processedFreq, dataBlock)
 
 ######################### YULE-WALKER #########################
-damp, freq = get_modes(processedFreq, fs=sampleRate, modelOrder=order)
+damp, freq = dpp.get_modes(processedFreq, fs=sampleRate, modelOrder=order)
 
 ######################### DATA SEND #########################
 
