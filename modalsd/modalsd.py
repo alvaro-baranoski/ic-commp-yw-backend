@@ -25,17 +25,23 @@ def modalsd(frf, f, fs):
         opts["ft"] = False
         [fn_i, dr_i] = poles_to_fd(compute_poles(frf, f, fs, iMode, opts))
         # Save modes
-
         sort_index = np.argsort(fn_i)
         fn_i = fn_i[sort_index]
         dr_i = dr_i[sort_index]
         fn[iMode-1] = fn_i
         dr[iMode-1] = dr_i
         mode_fn[0:iMode, iMode-1] = fn[iMode-1]
+        # Check for mode stability
+        # TODO: DISCREPÂNCIA DE RESULTADOS NA LINHA 6
         if iMode > 1:
-            pass
-        
-
+            [mode_stab_fn[0:(iMode - 1),iMode-2], mode_stab_dr[0:(iMode - 1),iMode-2]] = \
+            compare_modes(fn[iMode-1], fn[iMode-2], dr[iMode-1], dr[iMode-2], opts)
+            fn_out[iMode-2, 0:(iMode-1)] = np.transpose(fn[iMode-2])
+            # Remove frequencies from fnout corresponding to modes that are not
+            # stable in frequency
+            cond = np.logical_not(mode_stab_fn[0:(iMode - 1),iMode-2])
+            # fn_out[iMode-2, cond, iMode-2] = np.nan
+            fn_out[iMode-2, 0:(iMode-1)][cond] = np.nan
 
 
 def compute_poles(frf, f: np.array, fs, mnum, opts):
@@ -140,3 +146,22 @@ def fd_to_poles(fn, dr):
     wn = 2 * np.pi * fn
     poles = -1*dr*wn + 1j*wn*np.sqrt(1 - dr**2)
     return poles
+
+
+def compare_modes(fn1, fn0, dr1, dr0, opts):
+    """
+    % Compare the locations of the natural frequencies and damping ratios
+    % between two model orders. fn1 and dr1 represent the larger model order.
+    % modeStabfn and modeStabdr are logical arrays of the same size as fn0 and
+    % dr0, and return true if there is a frequency or damping ratio in fn1 and
+    % dr1 that is within one percent of fn0 and dr0.
+    """
+
+    mode_stab_fn = np.zeros(len(fn0))
+    mode_stab_dr = np.zeros(len(dr0))
+
+    for i in range(len(fn0)):
+        mode_stab_fn[i] = min(abs(fn0[i] - fn1[:])) < opts["sc"][0]*fn0[i]
+        mode_stab_dr[i] = min(abs(dr0[i] - dr1[:])) < opts["sc"][1]*dr0[i]
+    
+    return mode_stab_fn, mode_stab_dr
