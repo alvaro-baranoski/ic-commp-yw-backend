@@ -43,6 +43,8 @@ def modalsd(frf, f, fs):
             # fn_out[iMode-2, cond, iMode-2] = np.nan
             fn_out[iMode-2, 0:(iMode-1)][cond] = np.nan
 
+    plot_s_diagram(frf, f, mode_fn, mode_stab_fn, mode_stab_dr, opts)
+
 
 def compute_poles(frf, f: np.array, fs, mnum, opts):
     if (opts["fm"] == "lsce"):
@@ -165,3 +167,47 @@ def compare_modes(fn1, fn0, dr1, dr0, opts):
         mode_stab_dr[i] = min(abs(dr0[i] - dr1[:])) < opts["sc"][1]*dr0[i]
     
     return mode_stab_fn, mode_stab_dr
+
+
+def plot_s_diagram(frf, f, mode_fn, mode_stab_fn, mode_stab_dr, opts):
+    f_idx = []
+    first_condition = f >= opts["fr"][0]
+    second_condition = f <= opts["fr"][1]
+    f_idx = np.logical_and(first_condition, second_condition)
+
+    f = f[f_idx]
+    frf = frf[f_idx]
+
+    mode_stab_fn = np.array(mode_stab_fn, dtype=bool)
+    mode_stab_dr = np.array(mode_stab_dr, dtype=bool)
+
+    i_f = np.logical_and(mode_stab_fn, np.logical_not(mode_stab_dr))
+    i_f_and_d = np.logical_and(mode_stab_fn, mode_stab_dr)
+    i_not_f = np.logical_not(mode_stab_fn)
+
+    mode_number = range(1, opts["mm"]+1) * np.ones((opts["mm"], 1))
+
+    # Compute a modal peaks function from FRFs
+    mpf = np.abs(np.power(frf, 2))
+
+    # Plot configurations
+    import matplotlib.pyplot as plt
+    fig, ax1 = plt.subplots()
+    ax1.set_xlabel("Frequency [Hz]")
+    # Modes axis
+    ax1.scatter(mode_fn[i_f], mode_number[i_f], marker="o")
+    ax1.scatter(mode_fn[i_f_and_d], mode_number[i_f_and_d], marker="+")
+    ax1.scatter(mode_fn[i_not_f], mode_number[i_not_f], marker=",")
+    ax1.set_ylim([0, opts["mm"]+0.5])
+    ax1.set_xlim([f[0], f[-1]])
+
+    # FRF axis
+    ax2 = ax1.twinx()
+    
+    color = "tab:orange"
+    ax2.set_ylabel("Magnitude", color=color)
+    ax2.plot(f, mpf)
+    ax2.set_yscale("log")
+
+    plt.show()
+
