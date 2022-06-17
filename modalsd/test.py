@@ -2,6 +2,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 from modalsd import modalsd
+from modalsd_3d import modalsd_3d
 from pyulear import pyulear
 
 
@@ -37,9 +38,4 @@ with open("modalsd\signalff.csv", "r") as file:
 
 signalff = np.array(signalff, dtype=np.float64)
 
-[pxx, freq] = pyulear(signalff, order=25, nfft=2000, fs=fs)
-
-plt.plot(freq, pxx)
-plt.show()
-
-pass
+modalsd_3d(signalff, order=25, fs=fs, window_time=100, slide=120)

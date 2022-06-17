@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.linalg import hankel
 
-def modalsd(frf, f, fs):
+def modalsd(frf, f, fs, max_modes=22, conventional = True):
 
     opts = {
         "fr": [0, 2.5], # Frequency range
@@ -43,7 +43,26 @@ def modalsd(frf, f, fs):
             # fn_out[iMode-2, cond, iMode-2] = np.nan
             fn_out[iMode-2, 0:(iMode-1)][cond] = np.nan
 
-    plot_s_diagram(frf, f, mode_fn, mode_stab_fn, mode_stab_dr, opts)
+
+    if conventional:
+        plot_s_diagram(frf, f, mode_fn, mode_stab_fn, mode_stab_dr, opts)
+    else:
+        A = np.zeros((len(dr), len(dr)))
+        for i in range(0, len(dr)):
+            if type(dr[i]) == int:
+                A[i, 0] = dr[i]
+            else:
+                for j in range(0, len(dr[i])):
+                    A[i,j] = dr[i][j]
+        dr = A
+
+        # A = np.array([])
+        # for i in range(0, len(fn)):
+        #     for j in range(0, len(fn[i])):
+        #         A[i,j] = fn[i][j]
+        # fn = A
+
+        return fn_out, dr
 
 
 def compute_poles(frf, f: np.array, fs, mnum, opts):
