@@ -37,4 +37,9 @@ with open("modalsd\signalff.csv", "r") as file:
 
 signalff = np.array(signalff, dtype=np.float64)
 
-pyulear(signalff, order=25, nfft=2000, fs=fs)
+[pxx, freq] = pyulear(signalff, order=25, nfft=2000, fs=fs)
+
+plt.plot(freq, pxx)
+plt.show()
+
+pass
