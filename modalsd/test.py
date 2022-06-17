@@ -2,8 +2,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 from modalsd import modalsd
-from modalsd_3d import modalsd_3d, ar2pds
-from statsmodels.regression.linear_model import yule_walker
+from pyulear import pyulear
 
 
 ##############################################
@@ -37,3 +36,5 @@ with open("modalsd\signalff.csv", "r") as file:
         signalff.append(float(row[0]))
 
 signalff = np.array(signalff, dtype=np.float64)
+
+pyulear(signalff, order=25, nfft=2000, fs=fs)
