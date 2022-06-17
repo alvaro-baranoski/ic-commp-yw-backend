@@ -2,11 +2,15 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 from modalsd import modalsd
+from modalsd_3d import modalsd_3d, ar2pds
+from statsmodels.regression.linear_model import yule_walker
+
 
 ##############################################
 # ANALISANDO A FUNÇÃO MODAL_PLOT DO ARQUIVO 
 # MAIN.PY DENTRO DE RESULTADOS_PRELIMINARES
 ##############################################
+# Diagrama de estabilização convencional
 
 freq = []
 pxx = []
@@ -22,3 +26,14 @@ pxx = np.array(pxx, dtype=np.float64)
 freq = np.array(freq, dtype=np.float64)
 
 modalsd(frf=pxx, f=freq, fs=fs)
+
+
+# Diagrama de estabilização 3D
+signalff = []
+
+with open("modalsd\signalff.csv", "r") as file:
+    reader = csv.reader(file)
+    for row in reader:
+        signalff.append(float(row[0]))
+
+signalff = np.array(signalff, dtype=np.float64)
