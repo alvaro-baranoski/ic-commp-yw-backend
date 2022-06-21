@@ -1,63 +1,45 @@
+#! /opt/ic-commp/bin/python3 startup.py
+
 from get_data import get_data_from_api
 from datetime import datetime
-from scipy import signal
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 import data_preprocessing as dpp
-from statsmodels.regression.linear_model import yule_walker
+from sys import argv, path
 
+path.append("modalsd")
 
-def get_modes(processedFreq, fs, modelOrder=10):
-    ar, sigma = yule_walker(processedFreq, order=modelOrder, method="mle")
-    ar *= -1
+from pyulear import pyulear
+from modalsd import modalsd
+from modalsd_3d import modalsd_3d
 
-    polyCoeff = np.array([1])
-    polyCoeff = np.append(polyCoeff, ar)
-
-    raizes_est_z = np.roots(polyCoeff)
-    raizes_est_s = np.log(raizes_est_z) * fs
-
-    # Remove negative frequencies
-    raizes_est_s = [mode for mode in raizes_est_s if mode.imag > 0]
-
-    # Calculates frequency in hertz and damping ratio in percentage
-    freq_y = [mode.imag / (2 * np.pi) for mode in raizes_est_s]
-    damp_x = [-np.divide(mode.real, np.absolute(mode)) for mode in raizes_est_s]
-
-    return damp_x, freq_y
-
-
-def butterworth(data, cutoff, order, fs, kind="lowpass"):
-    # highpass filter
-    nyq = fs * 0.5
-
-    cutoff = cutoff / nyq
-
-    sos = signal.butter(order, cutoff, btype=kind, output="sos")
-
-    filtrada = signal.sosfilt(sos, data)
-
-    return filtrada
-
-
-def correct_length(data, batch):
-    # Corrects length of frequency list
-    if len(data) % batch != 0:
-        exactMult = np.floor(len(data) / batch)
-        exactLen = int(exactMult * batch)
-        lenDiff = len(data) - exactLen
-        data = data[:-lenDiff]
-    return data
-
-
-print("starting program")
-
-# Sampling rate in Hz
-sampleRate = 30
-# Set the data time window in minutes
-timeWindow = 120
 # Select PMU based on user input
-pmuSelect = "agrarias"
+pmuSelect = 533
+# Set the data time window in minutes
+# Default value: 60
+timeWindow = 20
+# Sampling rate in Hz
+# Default value: 15
+sampleRate = 100
+# Polynomial order
+# Default value: 20
+order = 25
+# Filter lower cutoff frequency
+# Default value: 0.3
+filtLowpass = 0.07
+# Filter higher cutoff frequency
+# Default value: 7.0
+filtHighpass = 4.0
+# Outlier detection constant
+# Default value: 3.5
+outlierConstant = 5
+# View type
+viewSelect = "complete"
+
+FS_DOWN = 20
+# Em s
+WINDOW_TIME = 100
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -78,97 +60,40 @@ startTime = endTime - (timeWindow * 60 * 1000)
 ######################### DATA AQUISITION #########################
 
 # Get the frequency data based on the start and end time
-apiData = np.array(
-    [get_data_from_api(
+apiData = np.array([get_data_from_api(
     startTime,
     endTime,
     feed_id=pmuSelect,
     interval=sampleRate,
     interval_type=1,
-    skip_missing=0)])
+    skip_missing=0
+)])
 
 # Splits data into time and frequency values and removes missing data
 unixValues = np.array([i[0] for i in apiData[0]])
 freqValues = np.array([i[1] for i in apiData[0]], dtype=np.float64)
 
+# Checa se valores de frequência estão disponíveis
+if (all(math.isnan(v) for v in freqValues)):
+    raise NameError('Dados da PMU indisponíveis')
+
 # Converts unix time to Numpy DateTime64 time milisseconds and converts from GMT time to local time
-timeValues = np.array([np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
+timeValues = np.array(
+    [np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
 
+ts = (timeValues[2] - timeValues[1]) / np.timedelta64(1, 's')
+fs = round(1 / ts)
 
-f1, f2 = 0.1, 2
-coef = signal.firwin(
-    numtaps=500,
-    cutoff=[f1, f2],
-    window='hann',
-    pass_zero=False,
-    fs=sampleRate
-)
-
-interpoled = dpp.linear_interpolation(freqValues)
-
-filtered = signal.filtfilt(coef, 1, interpoled)
-
-downsample_freq = 5
-downsampled = signal.decimate(filtered, int(sampleRate/downsample_freq))
-
-# Duração da janela em segundos
-window_duration = 10 * 60
-# Movimentação da janela em segundos
-window_moving = 10
-
-window_points = window_duration * downsample_freq
-
-batch = downsampled[:window_points]
-
-# damp, freq = get_modes(downsampled, fs=downsample_freq, modelOrder=25)
-
-# plt.scatter(freq, damp)
-plt.plot(batch)
-plt.show()
 ######################### PARCEL CONFIG #########################
+signalff, ts1, fs1 = \
+dpp.preprocessamento(freqValues, ts, fs, fsDown=FS_DOWN, filtLowpass=filtHighpass, k=3)
 
-# Set size of data blocks in minutes
-# numberBlocks = 3
-
-# Corrects length of frequency list
-# frequency = correct_length(freqValues, batch=numberBlocks)
-
-# Instantiate list for output values
-# processedFreq = np.array([])
-
-#freqValues = signal.decimate(freqValues, int(60/5))
-
-######################### DATA PARCELING #########################
-# for dataBlock in np.array_split(freqValues, numberBlocks):
-
-#     # Check for long NaN runs
-#     nanRun = dpp.find_nan_run(dataBlock, run_max=10)
-
-#     # Linear interpolation
-#     dataBlock = dpp.linear_interpolation(dataBlock)
-
-#     # Outlier removal
-#     dataBlock = dpp.mean_outlier_removal(dataBlock, k=3.5)
-
-#     # Linear interpolation
-#     dataBlock = dpp.linear_interpolation(dataBlock)
-
-#     # Detrend
-#     dataBlock -= np.nanmean(dataBlock)
-
-#     dataBlock = butterworth(dataBlock, cutoff=0.3, order=16,
-#                             fs=sampleRate, kind="highpass")
-#     dataBlock = butterworth(dataBlock, cutoff=7.0, order=16,
-#                             fs=sampleRate, kind="lowpass")
-
-#     # Append processed data
-#     processedFreq = np.append(processedFreq, dataBlock)
+plt.plot(signalff)
+plt.show()
 
 ######################### YULE-WALKER #########################
-# damp, freq = get_modes(processedFreq, fs=sampleRate, modelOrder=20)
+num_seg = fs1 * WINDOW_TIME
+[pxx, freq] = pyulear(signalff, order, num_seg, fs1)
 
-# ######################### PLOT #########################
-# plt.scatter(freq, damp)
-# plt.ylabel("Fator de amortecimento")
-# plt.xlabel("Frequência [Hz]")
-# plt.show()
+modalsd(pxx, freq, fs1, 25)
+######################### DATA SEND #########################

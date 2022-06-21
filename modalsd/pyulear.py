@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import signal
-import spectrum
+from spectrum import aryule
 
 def pyulear(x, order, nfft, fs):
     r"""
@@ -39,9 +39,9 @@ def arspectra(x, order, nfft, fs):
     complex signals, it returns the two-sided PSD.  Note that a one-sided PSD
     contains the total power of the input signal.
     """
-    [a, p, k] = spectrum.aryule(x, order)
+    [a, p, k] = aryule(x, order)
     a = np.append(np.array([1]), a)
-    [w, h] = signal.freqz(1, a, nfft, whole=True, fs=fs)
+    [w, h] = signal.freqz(1, a, nfft, whole=True, fs=fs, include_nyquist=True)
     sxx = np.abs(h)**2 * p
 
     [pxx, w] = computepsd(sxx, w, nfft, fs)

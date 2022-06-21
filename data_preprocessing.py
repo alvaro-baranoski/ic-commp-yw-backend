@@ -1,8 +1,35 @@
+import math
 from scipy import signal
 import numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.regression.linear_model import yule_walker
 
+
+def preprocessamento(x, ts, fs, fsDown, filtLowpass, k):
+	signalIp = linear_interpolation(x)
+	signalSout = mean_outlier_removal(signalIp, k)
+	signalSip = linear_interpolation(signalSout)
+	signalDown, ts1, fs1 = downsample(signalSip, ts, fs, fsDown)
+	signalDet = signal.detrend(signalDown)
+	signalFilt = lowpassFilter(signalDet, fs1, filtLowpass, 500)
+	return signalFilt, ts1, fs1
+
+
+def downsample(x, ts, fs, fsDown):
+	ratio = math.floor(fs / fsDown)
+	ts1 = ts * ratio
+	fs1 = 1 / ts1
+	signalDown = signal.decimate(x, ratio, zero_phase=True)
+	return signalDown, ts1, fs1
+
+
+def lowpassFilter(x, fs, cutoff, order):
+	# Calculates filter coefficients
+	nyq = 0.5 * fs
+	normal_cutoff = cutoff / nyq
+	coef = signal.firwin(order, normal_cutoff, window='hanning', pass_zero="lowpass")
+	signalFilt = signal.lfilter(coef, 1, x)
+	return signalFilt
 
 
 def nan_indexes(nan_array):

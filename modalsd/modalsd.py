@@ -6,9 +6,11 @@ def modalsd(frf, f, fs, max_modes=22, conventional = True):
     opts = {
         "fr": [0, 2.5], # Frequency range
         "sc": [0.01, 0.05], # Frequency and damping criteria.
-        "mm": 22, # Maximum modes
         "fm": "lsce" # Fit method
     }
+
+    # Maximum modes
+    opts["mm"] = max_modes
 
     fn = np.zeros(opts["mm"], dtype=object)
     dr = np.zeros(opts["mm"], dtype=object)
