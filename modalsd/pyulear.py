@@ -2,6 +2,7 @@ import numpy as np
 from scipy import signal
 from spectrum import aryule
 
+
 def pyulear(x, order, nfft, fs):
     r"""
     From matlab:
@@ -41,10 +42,10 @@ def arspectra(x, order, nfft, fs):
     """
     [a, p, k] = aryule(x, order)
     a = np.append(np.array([1]), a)
-    [w, h] = signal.freqz(1, a, nfft, whole=True, fs=fs, include_nyquist=True)
+    [w, h] = signal.freqz(1, a, int(nfft), whole=True, fs=fs)
     sxx = np.abs(h)**2 * p
 
-    [pxx, w] = computepsd(sxx, w, nfft, fs)
+    [pxx, w] = computepsd(sxx, w, int(nfft), fs)
 
     return pxx, w
 

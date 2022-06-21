@@ -95,5 +95,5 @@ plt.show()
 num_seg = fs1 * WINDOW_TIME
 [pxx, freq] = pyulear(signalff, order, num_seg, fs1)
 
-modalsd(pxx, freq, fs1, 25)
+modalsd(pxx, freq, fs1, order)
 ######################### DATA SEND #########################
