@@ -24,7 +24,7 @@ timeWindow = 20
 sampleRate = 100
 # Polynomial order
 # Default value: 20
-order = 25
+order = 23
 # Filter lower cutoff frequency
 # Default value: 0.3
 filtLowpass = 0.07
@@ -95,5 +95,6 @@ plt.show()
 num_seg = fs1 * WINDOW_TIME
 [pxx, freq] = pyulear(signalff, order, num_seg, fs1)
 
-modalsd(pxx, freq, fs1, order)
+frf, f, mode_fn, mode_stab_fn, mode_stab_dr = \
+    modalsd(pxx, freq, fs1, order, finish="return")
 ######################### DATA SEND #########################
