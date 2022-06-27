@@ -2,14 +2,18 @@
 
 from get_data import get_data_from_api
 from datetime import datetime
-from scipy import signal
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 import data_preprocessing as dpp
-from statsmodels.regression.linear_model import yule_walker
-from sys import argv
+from sys import argv, path
 from json import dumps
+
+# path.append("modalsd")
+
+# from pyulear import pyulear
+# from modalsd import modalsd
+# from modalsd_3d import modalsd_3d
 
 # Select PMU based on user input
 pmuSelect = argv[1]
@@ -24,15 +28,20 @@ sampleRate = int(argv[3])
 order = int(argv[4])
 # Filter lower cutoff frequency
 # Default value: 0.3
-lower_filter = float(argv[5])
+filtLowpass = float(argv[5])
 # Filter higher cutoff frequency
 # Default value: 7.0
-higher_filter = float(argv[6])
+filtHighpass = float(argv[6])
 # Outlier detection constant
 # Default value: 3.5
 outlier_constant = float(argv[7])
 # View type
 viewSelect = argv[8]
+
+FS_DOWN = 20
+# Em s
+WINDOW_TIME = 100
+
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -79,56 +88,15 @@ if (all(math.isnan(v) for v in freqValues)):
 timeValues = np.array(
     [np.datetime64(int(i - (3 * 3600000)), 'ms') for i in unixValues])
 
-######################### PARCEL CONFIG #########################
+ts = (timeValues[2] - timeValues[1]) / np.timedelta64(1, 's')
+fs = round(1 / ts)
 
-# Set size of data blocks in minutes
-numberBlocks = 3
-
-# Corrects length of frequency list
-frequency = dpp.correct_length(freqValues, batch=numberBlocks)
-
-# Instantiate list for output values
-processedFreq = np.array([])
-
-######################### DATA PARCELING #########################
-for dataBlock in np.array_split(freqValues, numberBlocks):
-
-    # Check for long NaN runs
-    nanRun = dpp.find_nan_run(dataBlock, run_max=10)
-
-    # Linear interpolation
-    dataBlock = dpp.linear_interpolation(dataBlock)
-
-    # Outlier removal
-    dataBlock = dpp.mean_outlier_removal(dataBlock, k=outlier_constant)
-
-    # Linear interpolation
-    dataBlock = dpp.linear_interpolation(dataBlock)
-
-    # Detrend
-    dataBlock -= np.nanmean(dataBlock)
-
-    dataBlock = dpp.butterworth(
-        dataBlock, 
-        cutoff=lower_filter, 
-        order=16,
-        fs=sampleRate, 
-        kind="highpass"
-    )
-
-    dataBlock = dpp.butterworth(
-        dataBlock, 
-        cutoff=higher_filter, 
-        order=16,
-        fs=sampleRate, 
-        kind="lowpass"
-    )
-
-    # Append processed data
-    processedFreq = np.append(processedFreq, dataBlock)
+######################### PRE PROCESSING #########################
+signalff, ts1, fs1 = \
+dpp.preprocessamento(freqValues, ts, fs, fsDown=FS_DOWN, filtLowpass=filtHighpass, k=3)
 
 ######################### YULE-WALKER #########################
-damp, freq = dpp.get_modes(processedFreq, fs=sampleRate, modelOrder=order)
+damp, freq = dpp.get_modes(signalff, fs=sampleRate, modelOrder=order)
 
 ######################### DATA SEND #########################
 
@@ -142,7 +110,7 @@ data_to_php = {
 
 # Adds advanced view type
 if (viewSelect == 'complete'):
-    data_to_php["freq_process"] = processedFreq.tolist()
+    data_to_php["freq_process"] = signalff.tolist()
 
 # Sends dict data to php files over JSON
 print(dumps(data_to_php))
