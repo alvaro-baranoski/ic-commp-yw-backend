@@ -3,7 +3,7 @@
 from sys import argv, path
 
 # TODO: Ajustar nome do folder para igualar o do servidor
-path.append("../yulewalker/modalsd")
+path.append("/opt/yulewalker/modalsd")
 # path.append("..\ic-commp-yw-backend\modalsd")
 
 from pyulear import pyulear
@@ -16,8 +16,6 @@ import math
 import numpy as np
 import data_preprocessing as dpp
 from json import dumps
-
-
 
 
 # Select PMU based on user input
