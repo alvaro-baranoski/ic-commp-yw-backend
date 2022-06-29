@@ -1,4 +1,4 @@
-import pyulear
+from pyulear import pyulear
 import numpy as np
 from modalsd import modalsd
 import matplotlib.pyplot as plt
@@ -22,7 +22,7 @@ def modalsd_3d(signalff, order, fs, window_time, slide):
         else:
             signal_w = signalff[foo*fs:(window+foo)*fs]
 
-        [pxx, freq] = pyulear.pyulear(signal_w, order, num_seg, fs)
+        [pxx, freq] = pyulear(signal_w, order, num_seg, fs)
 
         [fn, dr] = modalsd(frf=pxx, f=freq, fs=fs, max_modes=25, conventional=False)
 

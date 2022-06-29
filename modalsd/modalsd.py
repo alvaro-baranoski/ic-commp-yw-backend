@@ -49,6 +49,13 @@ def modalsd(frf, f, fs, max_modes=22, finish="plot"):
     if finish == "plot":
         plot_s_diagram(frf, f, mode_fn, mode_stab_fn, mode_stab_dr, opts)
     elif finish == "return":
+        # Replace NaN with None for JSON
+        mode_fn = mode_fn.tolist()
+        for i in range(0, len(mode_fn)):
+            for y in range(0, len(mode_fn[i])):
+                if str(mode_fn[i][y]) == "nan":
+                    mode_fn[i][y] = None
+
         return frf, f, mode_fn, mode_stab_fn, mode_stab_dr
     else:
         A = np.zeros((len(dr), len(dr)))

@@ -1,47 +1,45 @@
 #! /opt/ic-commp/bin/python3 startup.py
 
-from get_data import get_data_from_api
+from src.main.get_data import get_data_from_api
 from datetime import datetime
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-import data_preprocessing as dpp
+import src.main.data_preprocessing as dpp
 from sys import argv, path
-from json import dumps
 
-# path.append("modalsd")
+path.append("modalsd")
 
-# from pyulear import pyulear
-# from modalsd import modalsd
-# from modalsd_3d import modalsd_3d
+from pyulear import pyulear
+from modalsd import modalsd
+from modalsd_3d import modalsd_3d
 
 # Select PMU based on user input
-pmuSelect = argv[1]
+pmuSelect = 533
 # Set the data time window in minutes
 # Default value: 60
-timeWindow = int(argv[2])
+timeWindow = 20
 # Sampling rate in Hz
 # Default value: 15
-sampleRate = int(argv[3])
+sampleRate = 100
 # Polynomial order
 # Default value: 20
-order = int(argv[4])
+order = 23
 # Filter lower cutoff frequency
 # Default value: 0.3
-filtLowpass = float(argv[5])
+filtLowpass = 0.07
 # Filter higher cutoff frequency
 # Default value: 7.0
-filtHighpass = float(argv[6])
+filtHighpass = 4.0
 # Outlier detection constant
 # Default value: 3.5
-outlier_constant = float(argv[7])
+outlierConstant = 5
 # View type
-viewSelect = argv[8]
+viewSelect = "complete"
 
 FS_DOWN = 20
 # Em s
 WINDOW_TIME = 100
-
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -75,11 +73,6 @@ apiData = np.array([get_data_from_api(
 unixValues = np.array([i[0] for i in apiData[0]])
 freqValues = np.array([i[1] for i in apiData[0]], dtype=np.float64)
 
-# Pads NaN with linear interpolation
-# (this step is required for avoiding JSON parsing bug)
-freqValues_toPHP = np.array([i[1] for i in apiData[0]], dtype=np.float64)
-freqValues_toPHP = dpp.linear_interpolation(freqValues_toPHP)
-
 # Checa se valores de frequência estão disponíveis
 if (all(math.isnan(v) for v in freqValues)):
     raise NameError('Dados da PMU indisponíveis')
@@ -91,26 +84,17 @@ timeValues = np.array(
 ts = (timeValues[2] - timeValues[1]) / np.timedelta64(1, 's')
 fs = round(1 / ts)
 
-######################### PRE PROCESSING #########################
+######################### PARCEL CONFIG #########################
 signalff, ts1, fs1 = \
 dpp.preprocessamento(freqValues, ts, fs, fsDown=FS_DOWN, filtLowpass=filtHighpass, k=3)
 
+plt.plot(signalff)
+plt.show()
+
 ######################### YULE-WALKER #########################
-damp, freq = dpp.get_modes(signalff, fs=sampleRate, modelOrder=order)
+num_seg = fs1 * WINDOW_TIME
+[pxx, freq] = pyulear(signalff, order, num_seg, fs1)
 
+frf, f, mode_fn, mode_stab_fn, mode_stab_dr = \
+    modalsd(pxx, freq, fs1, order, finish="return")
 ######################### DATA SEND #########################
-
-# Prepares dictionary for JSON file
-data_to_php = {
-    "freq": freqValues_toPHP.tolist(),
-    "date": timeValues.astype(str).tolist(),
-    "damp": damp,
-    "modes": freq
-}
-
-# Adds advanced view type
-if (viewSelect == 'complete'):
-    data_to_php["freq_process"] = signalff.tolist()
-
-# Sends dict data to php files over JSON
-print(dumps(data_to_php))

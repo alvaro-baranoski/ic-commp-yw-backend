@@ -1,12 +1,12 @@
 from ast import dump
 from ctypes import sizeof
-from get_data import get_data_from_api
+from src.main.get_data import get_data_from_api
 from datetime import datetime
 from scipy import signal
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-import data_preprocessing as dpp
+import src.main.data_preprocessing as dpp
 from statsmodels.regression.linear_model import yule_walker
 
 
