@@ -1,11 +1,11 @@
 #! /opt/ic-commp/bin/python3 startup.py
 
-from src.main.get_data import get_data_from_api
+from get_data import get_data_from_api
 from datetime import datetime
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-import src.main.data_preprocessing as dpp
+import data_preprocessing as dpp
 from sys import argv, path
 
 path.append("modalsd")
