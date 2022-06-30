@@ -174,3 +174,17 @@ def butterworth(data, cutoff, order, fs, kind="lowpass"):
     filtrada = signal.sosfilt(sos, data)
 
     return filtrada
+
+
+def nan_to_none(x):
+	# Replace NaN with None for JSON
+	x = x.tolist()
+	for i in range(0, len(x)):
+		if str(x[i]) == "nan":
+			x[i] = None
+
+		# for y in range(0, len(x[i])):
+		# 	if str(x[i][y]) == "nan":
+		# 		x[i][y] = None
+
+	return x

@@ -49,14 +49,7 @@ def modalsd(frf, f, fs, max_modes=22, finish="plot"):
     if finish == "plot":
         plot_s_diagram(frf, f, mode_fn, mode_stab_fn, mode_stab_dr, opts)
     elif finish == "return":
-        # Replace NaN with None for JSON
-        mode_fn = mode_fn.tolist()
-        for i in range(0, len(mode_fn)):
-            for y in range(0, len(mode_fn[i])):
-                if str(mode_fn[i][y]) == "nan":
-                    mode_fn[i][y] = None
-
-        return frf, f, mode_fn, mode_stab_fn, mode_stab_dr
+        return plot_s_diagram(frf, f, mode_fn, mode_stab_fn, mode_stab_dr, opts, return_values=True)
     else:
         A = np.zeros((len(dr), len(dr)))
         for i in range(0, len(dr)):
@@ -199,7 +192,7 @@ def compare_modes(fn1, fn0, dr1, dr0, opts):
     return mode_stab_fn, mode_stab_dr
 
 
-def plot_s_diagram(frf, f, mode_fn, mode_stab_fn, mode_stab_dr, opts):
+def plot_s_diagram(frf, f, mode_fn, mode_stab_fn, mode_stab_dr, opts, return_values = False):
     f_idx = []
     first_condition = f >= opts["fr"][0]
     second_condition = f <= opts["fr"][1]
@@ -219,6 +212,9 @@ def plot_s_diagram(frf, f, mode_fn, mode_stab_fn, mode_stab_dr, opts):
 
     # Compute a modal peaks function from FRFs
     mpf = np.abs(np.power(frf, 2))
+
+    if (return_values):
+        return mpf, f, mode_fn[i_f], mode_number[i_f], mode_fn[i_f_and_d], mode_number[i_f_and_d], mode_fn[i_not_f], mode_number[i_not_f]; 
 
     # Plot configurations
     import matplotlib.pyplot as plt

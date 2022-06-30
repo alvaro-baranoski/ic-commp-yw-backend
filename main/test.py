@@ -95,6 +95,6 @@ plt.show()
 num_seg = fs1 * WINDOW_TIME
 [pxx, freq] = pyulear(signalff, order, num_seg, fs1)
 
-frf, f, mode_fn, mode_stab_fn, mode_stab_dr = \
+c_mpf, c_f, c_stab_freq_fn, c_stab_freq_mn, c_stab_fn, c_stab_mn, c_not_stab_fn, c_not_stab_mn = \
     modalsd(pxx, freq, fs1, order, finish="return")
 ######################### DATA SEND #########################
