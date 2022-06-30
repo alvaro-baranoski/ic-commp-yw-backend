@@ -3,7 +3,7 @@ import numpy as np
 from modalsd import modalsd
 import matplotlib.pyplot as plt
 
-def modalsd_3d(signalff, order, fs, window_time, slide):
+def modalsd_3d(signalff, order, fs, window_time, slide, finish = "plot"):
     num_seg = fs * window_time
 
     # TODO: DEPOIS CONFERIR COMO QUE CALCULA NO PROGRAMA
@@ -24,7 +24,7 @@ def modalsd_3d(signalff, order, fs, window_time, slide):
 
         [pxx, freq] = pyulear(signal_w, order, num_seg, fs)
 
-        [fn, dr] = modalsd(frf=pxx, f=freq, fs=fs, max_modes=25, conventional=False)
+        [fn, dr] = modalsd(frf=pxx, f=freq, fs=fs, max_modes=order, finish="3d")
 
         index = np.where(fn > 0)
 
@@ -34,6 +34,9 @@ def modalsd_3d(signalff, order, fs, window_time, slide):
         stable_modes = np.append(stable_modes, np.column_stack((fn_s, dr_s)), axis=0)
         
         foo += slide
+
+    if (finish == "return"):
+        return stable_modes[:, 0], stable_modes[:, 1]
 
     # Histogram plot
     MIN_FREQ = 0

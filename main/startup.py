@@ -44,6 +44,7 @@ viewSelect = argv[8]
 FS_DOWN = 20
 # Em s
 WINDOW_TIME = 100
+SLIDE = 120
 
 
 if pmuSelect == "eficiencia":
@@ -136,6 +137,13 @@ if (viewSelect == 'complete'):
     
     data_to_php["c_not_stab_fn"] = c_not_stab_fn
     data_to_php["c_not_stab_mn"] = c_not_stab_mn.tolist()
+
+    ######################### 3D DIAGRAM #########################
+    d3_freq, d3_damp = \
+    modalsd_3d(signalff, order, FS_DOWN, WINDOW_TIME, SLIDE, finish="return")
+
+    data_to_php["d3_freq"] = d3_freq.tolist()
+    data_to_php["d3_damp"] = d3_damp.tolist()
 
 # Sends dict data to php files over JSON
 data_dump = dumps(data_to_php)
