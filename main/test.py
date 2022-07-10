@@ -40,6 +40,7 @@ viewSelect = "complete"
 FS_DOWN = 20
 # Em s
 WINDOW_TIME = 100
+SLIDE = 120
 
 if pmuSelect == "eficiencia":
     pmuSelect = 506
@@ -88,13 +89,14 @@ fs = round(1 / ts)
 signalff, ts1, fs1 = \
 dpp.preprocessamento(freqValues, ts, fs, fsDown=FS_DOWN, filtLowpass=filtHighpass, k=3)
 
-plt.plot(signalff)
-plt.show()
-
 ######################### YULE-WALKER #########################
 num_seg = fs1 * WINDOW_TIME
 [pxx, freq] = pyulear(signalff, order, num_seg, fs1)
 
 c_mpf, c_f, c_stab_freq_fn, c_stab_freq_mn, c_stab_fn, c_stab_mn, c_not_stab_fn, c_not_stab_mn = \
     modalsd(pxx, freq, fs1, order, finish="return")
-######################### DATA SEND #########################
+
+d3_freq, d3_damp, main_modes = \
+    modalsd_3d(signalff, order, FS_DOWN, WINDOW_TIME, SLIDE, finish="return")
+
+print(main_modes)

@@ -114,36 +114,37 @@ data_to_php = {
 }
 
 # Adds advanced view type
-if (viewSelect == 'complete'):
-    data_to_php["freq_process"] = signalff.tolist()
+data_to_php["freq_process"] = signalff.tolist()
 
-    ######################### STAB DIAGRAM #########################
-    num_seg = fs1 * WINDOW_TIME
-    [pxx, freq] = pyulear(signalff, order, num_seg, fs1)
+######################### STAB DIAGRAM #########################
+num_seg = fs1 * WINDOW_TIME
+[pxx, freq] = pyulear(signalff, order, num_seg, fs1)
 
-    c_mpf, c_f, c_stab_freq_fn, c_stab_freq_mn, c_stab_fn, c_stab_mn, c_not_stab_fn, c_not_stab_mn = \
-    modalsd(pxx, freq, fs1, order, finish="return")
+c_mpf, c_f, c_stab_freq_fn, c_stab_freq_mn, c_stab_fn, c_stab_mn, c_not_stab_fn, c_not_stab_mn = \
+modalsd(pxx, freq, fs1, order, finish="return")
 
-    data_to_php["c_mpf"] = c_mpf.tolist()
-    data_to_php["c_f"] = c_f.tolist()
+data_to_php["c_mpf"] = c_mpf.tolist()
+data_to_php["c_f"] = c_f.tolist()
 
-    data_to_php["c_stab_freq_fn"] = c_stab_freq_fn.tolist()
-    data_to_php["c_stab_freq_mn"] = c_stab_freq_mn.tolist()
-    
-    data_to_php["c_stab_fn"] = c_stab_fn.tolist()
-    data_to_php["c_stab_mn"] = c_stab_mn.tolist()
+data_to_php["c_stab_freq_fn"] = c_stab_freq_fn.tolist()
+data_to_php["c_stab_freq_mn"] = c_stab_freq_mn.tolist()
 
-    c_not_stab_fn = dpp.nan_to_none(c_not_stab_fn)
-    
-    data_to_php["c_not_stab_fn"] = c_not_stab_fn
-    data_to_php["c_not_stab_mn"] = c_not_stab_mn.tolist()
+data_to_php["c_stab_fn"] = c_stab_fn.tolist()
+data_to_php["c_stab_mn"] = c_stab_mn.tolist()
+
+c_not_stab_fn = dpp.nan_to_none(c_not_stab_fn)
+
+data_to_php["c_not_stab_fn"] = c_not_stab_fn
+data_to_php["c_not_stab_mn"] = c_not_stab_mn.tolist()
 
     ######################### 3D DIAGRAM #########################
-    d3_freq, d3_damp = \
-    modalsd_3d(signalff, order, FS_DOWN, WINDOW_TIME, SLIDE, finish="return")
+d3_freq, d3_damp, main_modes = \
+modalsd_3d(signalff, order, FS_DOWN, WINDOW_TIME, SLIDE, finish="return")
 
-    data_to_php["d3_freq"] = d3_freq.tolist()
-    data_to_php["d3_damp"] = d3_damp.tolist()
+data_to_php["d3_freq"] = d3_freq.tolist()
+data_to_php["d3_damp"] = d3_damp.tolist()
+data_to_php["main_modes"] = main_modes
+data_to_php["view"] = viewSelect
 
 # Sends dict data to php files over JSON
 data_dump = dumps(data_to_php)
