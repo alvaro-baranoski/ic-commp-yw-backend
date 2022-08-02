@@ -100,8 +100,7 @@ signalff, ts1, fs1 = \
 dpp.preprocessamento(freqValues, ts, fs, fsDown=FS_DOWN, filtLowpass=filtHighpass, k=3)
 
 ######################### YULE-WALKER #########################
-damp, freq = dpp.get_modes(signalff, fs=sampleRate, modelOrder=order)
-
+damp, freq = dpp.get_modes(signalff, fs=fs1, modelOrder=order)
 
 ######################### DATA SEND #########################
 
