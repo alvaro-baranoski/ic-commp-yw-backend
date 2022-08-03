@@ -87,7 +87,7 @@ fs = round(1 / ts)
 
 ######################### PARCEL CONFIG #########################
 signalff, ts1, fs1 = \
-dpp.preprocessamento(freqValues, ts, fs, fsDown=FS_DOWN, filtLowpass=filtHighpass, k=3)
+dpp.preprocessamento(freqValues, ts, fs, fsDown=FS_DOWN, threshold_low=filtHighpass, k=3)
 
 ######################### YULE-WALKER #########################
 num_seg = fs1 * WINDOW_TIME

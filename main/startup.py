@@ -31,10 +31,10 @@ sampleRate = int(argv[3])
 order = int(argv[4])
 # Filter lower cutoff frequency
 # Default value: 0.3
-filtLowpass = float(argv[5])
+threshold_low = float(argv[5])
 # Filter higher cutoff frequency
 # Default value: 7.0
-filtHighpass = float(argv[6])
+threshold_high = float(argv[6])
 # Outlier detection constant
 # Default value: 3.5
 outlier_constant = float(argv[7])
@@ -97,7 +97,7 @@ fs = round(1 / ts)
 
 ######################### PRE PROCESSING #########################
 signalff, ts1, fs1 = \
-dpp.preprocessamento(freqValues, ts, fs, fsDown=FS_DOWN, filtLowpass=filtHighpass, k=3)
+dpp.preprocessamento(freqValues, ts, fs, FS_DOWN, threshold_low, threshold_high, k=3)
 
 ######################### YULE-WALKER #########################
 damp, freq = dpp.get_modes(signalff, fs=fs1, modelOrder=order)

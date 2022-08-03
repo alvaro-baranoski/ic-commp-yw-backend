@@ -5,15 +5,29 @@ import matplotlib.pyplot as plt
 from statsmodels.regression.linear_model import yule_walker
 
 
-def preprocessamento(x, ts, fs, fsDown, filtLowpass, k):
-	signalIp = linear_interpolation(x)
-	signalSout = mean_outlier_removal(signalIp, k)
-	signalSip = linear_interpolation(signalSout)
-	signalDown, ts1, fs1 = downsample(signalSip, ts, fs, fsDown)
-	signalDet = signal.detrend(signalDown)
-	signalFilt = lowpassFilter(signalDet, fs1, filtLowpass, 500)
-	return signalFilt, ts1, fs1
+def preprocessamento(x, ts, fs, fsDown, threshold_low, threshold_high ,k):
+	# Linear interpolation
+    dataBlock = linear_interpolation(x)
 
+    # Outlier removal
+    dataBlock = mean_outlier_removal(dataBlock, k=k)
+
+    # Linear interpolation
+    dataBlock = linear_interpolation(dataBlock)
+
+    # Downsample
+    dataBlock, ts1, fs1 = downsample(dataBlock, ts, fs, fsDown)
+
+    # Detrend
+    dataBlock -= np.nanmean(dataBlock)
+
+    # HP filter
+    dataBlock = highpassFilter(dataBlock, fs1, threshold_low, 501)
+
+    # LP filter
+    dataBlock = lowpassFilter(dataBlock, fs1, threshold_high, 500)
+
+    return dataBlock, ts1, fs1
 
 def downsample(x, ts, fs, fsDown):
 	ratio = math.floor(fs / fsDown)
@@ -31,6 +45,14 @@ def lowpassFilter(x, fs, cutoff, order):
 	signalFilt = signal.lfilter(coef, 1, x)
 	return signalFilt
 
+
+def highpassFilter(x, fs, cutoff, order):
+	# Calculates filter coefficients
+	nyq = 0.5 * fs
+	normal_cutoff = cutoff / nyq
+	coef = signal.firwin(order, normal_cutoff, window='hanning', pass_zero="highpass")
+	signalFilt = signal.lfilter(coef, 1, x)
+	return signalFilt
 
 def nan_indexes(nan_array):
 
