@@ -86,7 +86,7 @@ signals_array = []
 
 for frequency in frequencies_array:
     signalff, ts1, fs1 = \
-    dpp.preprocessamento(frequency, ts, fs, fsDown=FS_DOWN, filtLowpass=filtHighpass, k=3)
+    dpp.preprocessamento(frequency, ts, fs, fsDown=FS_DOWN, threshold_low=filtHighpass, k=3)
 
     signals_array.append(signalff)
 
