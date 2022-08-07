@@ -25,11 +25,11 @@ sampleRate = 100
 # Default value: 20
 order = 20
 # Filter lower cutoff frequency
-# Default value: 0.04
-filtLowpass = 0.04
+# Default value: 0.3
+threshold_low = 0.3
 # Filter higher cutoff frequency
-# Default value: 4.0
-filtHighpass = 4
+# Default value: 7.0
+threshold_high = 7.0
 # Outlier detection constant
 # Default value: 3.5
 outlier_constant = 5
@@ -86,7 +86,7 @@ signals_array = []
 
 for frequency in frequencies_array:
     signalff, ts1, fs1 = \
-    dpp.preprocessamento(frequency, ts, fs, fsDown=FS_DOWN, threshold_low=filtHighpass, k=3)
+    dpp.preprocessamento(frequency, ts, fs, FS_DOWN, threshold_low, threshold_high, k=3)
 
     signals_array.append(signalff)
 
