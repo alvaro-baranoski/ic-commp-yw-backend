@@ -1,6 +1,7 @@
 #! /opt/ic-commp/bin/python3 startup.py
 
 from sys import argv, path
+from crossvalidation import crossvalidation
 
 # TODO: Ajustar nome do folder para igualar o do servidor
 path.append("/opt/yulewalker/modalsd")
@@ -10,7 +11,7 @@ from pyulear import pyulear
 from modalsd import modalsd
 from modalsd_3d import modalsd_3d
 
-from get_data import get_data_from_api
+from get_data import get_data_from_api, get_data_from_welch
 from datetime import datetime
 import math
 import numpy as np
@@ -19,13 +20,13 @@ from json import dumps
 
 
 # Select PMU based on user input
-pmuSelect = argv[1]
+pmu_select = argv[1]
 # Set the data time window in minutes
 # Default value: 60
-timeWindow = int(argv[2])
+time_window = int(argv[2])
 # Sampling rate in Hz
 # Default value: 15
-sampleRate = int(argv[3])
+sample_rate = int(argv[3])
 # Polynomial order
 # Default value: 20
 order = int(argv[4])
@@ -46,22 +47,23 @@ FS_DOWN = 20
 WINDOW_TIME = 100
 SLIDE = 120
 
+pmu = 0
 
-if pmuSelect == "eficiencia":
-    pmuSelect = 506
-elif pmuSelect == "cabine":
-    pmuSelect = 515
-elif pmuSelect == "palotina":
-    pmuSelect = 524
-elif pmuSelect == "agrarias":
-    pmuSelect = 533
+if pmu_select == "eficiencia":
+    pmu = 506
+elif pmu_select == "cabine":
+    pmu = 515
+elif pmu_select == "palotina":
+    pmu = 524
+elif pmu_select == "agrarias":
+    pmu = 533
 
 ######################### DATE CONFIGURATION #########################
 
 # Get time window from current time in unix milisseconds format
 endTime = datetime.now()
 endTime = int((endTime.timestamp() - 60) * 1000)
-startTime = endTime - (timeWindow * 60 * 1000)
+startTime = endTime - (time_window * 60 * 1000)
 
 ######################### DATA AQUISITION #########################
 
@@ -69,8 +71,8 @@ startTime = endTime - (timeWindow * 60 * 1000)
 apiData = np.array([get_data_from_api(
     startTime,
     endTime,
-    feed_id=pmuSelect,
-    interval=sampleRate,
+    feed_id=pmu,
+    interval=sample_rate,
     interval_type=1,
     skip_missing=0
 )])
@@ -122,6 +124,16 @@ c_not_stab_fn = dpp.nan_to_none(c_not_stab_fn)
 d3_freq, d3_damp, main_modes = \
 modalsd_3d(signalff, order, FS_DOWN, WINDOW_TIME, SLIDE, finish="return")
 
+######################### CROSS VALIDATION ###################
+welch_data = get_data_from_welch(
+    pmu_select, 
+    time_window, 
+    sample_rate,
+    threshold_low,
+    threshold_high,
+    outlier_constant)
+
+main_modes = crossvalidation(main_modes, welch_data["peaks"])
 ######################### DATA SEND #########################
 
 # Prepares dictionary for JSON file

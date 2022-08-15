@@ -34,3 +34,21 @@ def get_data_from_api(start_time, end_time, feed_id=506, interval=60, interval_t
                         f"&export={export}")
 
     return data.json()
+
+
+# https://sirius.eletrica.ufpr.br/welch/graphs.php?action=startup&pmu=cabine&time_w=20&sample_freq=100&segment_window=100&segment_overlap=50&filter_lower=0.3&filter_higher=7&outlier_constant=3.5
+
+def get_data_from_welch(pmu, time_w, sample_freq, filter_lower, filter_higher, outlier_constant, segment_window=100, segment_overlap=50):
+    data = requests.get(
+        f"https://sirius.eletrica.ufpr.br/welch/graphs.php?"
+        f"&action=startup"
+        f"&pmu={pmu}"
+        f"&time_w={time_w}"
+        f"&sample_freq={sample_freq}"
+        f"&segment_window={segment_window}"
+        f"&segment_overlap={segment_overlap}"
+        f"&filter_lower={filter_lower}"
+        f"&filter_higher={filter_higher}"
+        f"&outlier_constant={outlier_constant}")
+    
+    return data.json()
