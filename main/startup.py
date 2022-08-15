@@ -109,7 +109,7 @@ signalff, ts1, fs1 = dpp.preprocessamento(
 )
 
 ######################### YULE-WALKER #########################
-damp, freq = dpp.get_modes(signalff, fs=fs1, modelOrder=order)
+damp_basic, freq_basic = dpp.get_modes(signalff, fs=fs1, modelOrder=order)
 
 ######################### STAB DIAGRAM #########################
 num_seg = fs1 * WINDOW_TIME
@@ -140,8 +140,8 @@ main_modes = crossvalidation(main_modes, welch_data["peaks"])
 data_to_php = {
     "freq": freqValues_toPHP.tolist(),
     "date": timeValues.astype(str).tolist(),
-    "damp": damp,
-    "modes": freq if type(freq) == list else freq.tolist(),
+    "damp": damp_basic,
+    "modes": freq_basic if type(freq_basic) == list else freq_basic.tolist(),
     "freq_process": signalff.tolist(),
     "c_mpf": c_mpf.tolist(),
     "c_f": c_f.tolist(),
