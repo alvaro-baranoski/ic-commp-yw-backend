@@ -17,7 +17,7 @@ from modalsd import modalsd
 from modalsd_3d import modalsd_3d
 
 # Select PMU based on user input
-pmu_select = "eficiencia"
+pmu_select = "palotina"
 # Set the data time window in minutes
 # Default value: 60
 time_window = 20
@@ -128,4 +128,7 @@ welch_data = get_data_from_welch(
     threshold_high,
     outlier_constant)
 
-crossvalidation(main_modes, welch_data["peaks"])
+main_modes = crossvalidation(main_modes, welch_data["peaks"])
+
+print(main_modes)
+print(welch_data["peaks"])
