@@ -96,24 +96,18 @@ ts = (timeValues[2] - timeValues[1]) / np.timedelta64(1, 's')
 fs = round(1 / ts)
 
 ######################### PRE PROCESSING #########################
-signalff, ts1, fs1 = \
-dpp.preprocessamento(freqValues, ts, fs, FS_DOWN, threshold_low, threshold_high, k=3)
+signalff, ts1, fs1 = dpp.preprocessamento(
+    freqValues, 
+    ts, 
+    fs, 
+    FS_DOWN, 
+    threshold_low, 
+    threshold_high, 
+    outlier_constant
+)
 
 ######################### YULE-WALKER #########################
 damp, freq = dpp.get_modes(signalff, fs=fs1, modelOrder=order)
-
-######################### DATA SEND #########################
-
-# Prepares dictionary for JSON file
-data_to_php = {
-    "freq": freqValues_toPHP.tolist(),
-    "date": timeValues.astype(str).tolist(),
-    "damp": damp,
-    "modes": freq if type(freq) == list else freq.tolist()
-}
-
-# Adds advanced view type
-data_to_php["freq_process"] = signalff.tolist()
 
 ######################### STAB DIAGRAM #########################
 num_seg = fs1 * WINDOW_TIME
@@ -122,28 +116,34 @@ num_seg = fs1 * WINDOW_TIME
 c_mpf, c_f, c_stab_freq_fn, c_stab_freq_mn, c_stab_fn, c_stab_mn, c_not_stab_fn, c_not_stab_mn = \
 modalsd(pxx, freq, fs1, order, finish="return")
 
-data_to_php["c_mpf"] = c_mpf.tolist()
-data_to_php["c_f"] = c_f.tolist()
-
-data_to_php["c_stab_freq_fn"] = c_stab_freq_fn.tolist()
-data_to_php["c_stab_freq_mn"] = c_stab_freq_mn.tolist()
-
-data_to_php["c_stab_fn"] = c_stab_fn.tolist()
-data_to_php["c_stab_mn"] = c_stab_mn.tolist()
-
 c_not_stab_fn = dpp.nan_to_none(c_not_stab_fn)
 
-data_to_php["c_not_stab_fn"] = c_not_stab_fn
-data_to_php["c_not_stab_mn"] = c_not_stab_mn.tolist()
-
-    ######################### 3D DIAGRAM #########################
+######################### 3D DIAGRAM #########################
 d3_freq, d3_damp, main_modes = \
 modalsd_3d(signalff, order, FS_DOWN, WINDOW_TIME, SLIDE, finish="return")
 
-data_to_php["d3_freq"] = d3_freq.tolist()
-data_to_php["d3_damp"] = d3_damp.tolist()
-data_to_php["main_modes"] = main_modes
-data_to_php["view"] = viewSelect
+######################### DATA SEND #########################
+
+# Prepares dictionary for JSON file
+data_to_php = {
+    "freq": freqValues_toPHP.tolist(),
+    "date": timeValues.astype(str).tolist(),
+    "damp": damp,
+    "modes": freq if type(freq) == list else freq.tolist(),
+    "freq_process": signalff.tolist(),
+    "c_mpf": c_mpf.tolist(),
+    "c_f": c_f.tolist(),
+    "c_stab_freq_fn": c_stab_freq_fn.tolist(),
+    "c_stab_freq_mn": c_stab_freq_mn.tolist(),
+    "c_stab_fn": c_stab_fn.tolist(),
+    "c_stab_mn": c_stab_mn.tolist(),
+    "c_not_stab_fn": c_not_stab_fn,
+    "c_not_stab_mn": c_not_stab_mn.tolist(),
+    "d3_freq": d3_freq.tolist(),
+    "d3_damp": d3_damp.tolist(),
+    "main_modes": main_modes,
+    "view": viewSelect
+}
 
 # Sends dict data to php files over JSON
 data_dump = dumps(data_to_php)
