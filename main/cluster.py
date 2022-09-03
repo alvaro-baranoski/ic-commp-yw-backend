@@ -96,24 +96,26 @@ modes_array = []
 
 for signal in signals_array:
     d3_freq, d3_damp, main_modes = \
-    modalsd_3d(signalff, order, FS_DOWN, WINDOW_TIME, SLIDE, finish="return")
+    modalsd_3d(signal, order, FS_DOWN, WINDOW_TIME, SLIDE, finish="return")
 
     modes_array.append(main_modes)
 
 ######################### FINAL MODES #########################
 
-result_modes = []
+# result_modes = []
+result_modes = np.array(modes_array).flatten().tolist()
 
-for modes in modes_array:
-    if (len(result_modes) == 0):
-        result_modes = modes
-    else:
-        for i in range(len(modes)):
-            mode = modes[i]
-            result_mode = result_modes[i]
-            if (mode["freq_interval"][0] == result_mode["freq_interval"][0] and 
-                mode["damp_interval"][0] == result_mode["damp_interval"][0]):
-                result_mode["presence"] += mode["presence"]
+for mode in result_modes:
+    for other_mode in result_modes:
+        isSameMode = mode == other_mode
+        isSameFreq = mode["freq_interval"] == other_mode["freq_interval"]
+        isSameDamp = mode["damp_interval"] == other_mode["damp_interval"]
+        if (isSameFreq and isSameDamp and not isSameMode):
+            mode["presence"] += other_mode["presence"]
+            result_modes.remove(other_mode)
+
+result_modes = sorted(result_modes, key=lambda d: d["presence"])
+result_modes.reverse()
 
 data_to_php = {
     "main_modes": result_modes
